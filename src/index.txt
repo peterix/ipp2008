@@ -1,0 +1,141 @@
+/*******************************************************************************
+ * ICP - Dáma server 2008:
+ * -----------------------------------------------------------------------------
+ *     Černý Lukáš          <xcerny37@stud.fit.vutbr.cz>
+ *     Dvořák Miroslav      <xdvora11@stud.fit.vutbr.cz>
+ *     Mrázek Petr          <xmraze03@stud.fit.vutbr.cz>
+ *     Oujeský Miroslav     <xoujes00@stud.fit.vutbr.cz>
+ * -----------------------------------------------------------------------------
+ * soubor index.txt - slouží k vygenerování první strany dokumentace programem
+ * doxygen
+ ***************************************************************************//**
+
+ \mainpage Dáma 2008
+
+ \section intro_sec Úvod
+
+ Dáma 2008 je aplikace typu klient-server, která vznikla na základě zadání projetku do předmětů ICP a IPP.
+
+ \section authors_sec Autoři
+		- Černý Lukáš				<xcerny37@stud.fit.vutbr.cz>
+		- Dvořák Miroslav		<xdvora11@stud.fit.vutbr.cz>
+		- Mrázek Petr				<xmraze03@stud.fit.vutbr.cz>
+		- Oujeský Miroslav	<xoujes00@stud.fit.vutbr.cz>
+
+ \section implement_sec Implementace
+
+ \subsection step1 Klient:
+ 		%Klient je <a href="http://www.wxwidgets.org" target="_blank">wxWidgets</a> aplikace implementujicí uživatelské rozhraní a logiku hry Dáma 2008.
+ 		Grafické uživatelské rozhraní bylo generováno za pomoci nástroje wxGlade. Logika hry je implementována samostatně.
+		Je vyjádřena pomocí tříd – Deska, Kamen a Dama – tyto jsou využívány i na serveru a řídí průběh a chování celé hry.
+		Síťová komunikace je řešena tak, že klient má Singleton (clSocket), který zapouzdřuje implementační detaily síťové komunikace.
+		Jednotlivá okna, která chtějí přijímat zprávy ze síťe musí být potomky třídy Receiver a zaregistrovat se pro
+		jejich odebírání. Rozesílání zpráv oknům je pak řízeno časovačem (wxTimer).
+ 		
+ \subsection step2 Server:
+ 		%Server je <a href="http://www.wxwidgets.org" target="_blank">wxWidgets</a> konzolová aplikace starajicí se o komunikaci
+		mezi klienty a ukladání informací na serveru (rozehrané hry, seznam registrovaných hráčů, ...).
+		Proces připojení a zpracovávání požadavků klienta funguje následovně:
+				- %server čeká na portu 8007 na příchozí spojení
+				- jakmile je spojení navázáno, předává řízení tohoto spojení do nového vlákna
+				- v tomto vláknu se postupně získávají požadavky od klienta, a rozparsují se xml parserem
+				- po rozparsování se nastaví příslušné hodnoty do sdílených seznamů
+				- každé vlákno navíc kontroluje, zda v některém ze sdílených seznamů, nečekají data pro jeho klienta
+				- pokud ano, pošlou se data klientovi a záznam se ze sdíleného seznamu odstraní
+
+		%Server využívá pro práci se sockety třídu <a href="http://docs.wxwidgets.org/stable/wx_wxsocketbase.html" target="_blank">wxSocketBase</a>
+		a třídy od ní odvozené a pro práci s vlákny třídu odvozenou od třídy <a href="http://docs.wxwidgets.org/stable/wx_wxthread.html" target="_blank">wxThread</a>.
+ \subsection step3 stats.py:
+ 		%Skript stats.py prochází rekurzivně složku ve které je umístěn a vytváří si seznam souborů s příponami pro jazyk C++
+        
+        %Poté na základě vstupních parametrů v jednotlivých souborech hledá výstyty daného typu.
+        
+        %Po vyhledání výskytů je vypíše s patřičným formátováním na standardní výstup.
+  
+ \subsection step4 Protokol:
+ Zde jsou vypsané požadavky používaného protokolu.
+
+ \verbatim
+ <!--Požadavky posílané klientem ------------------------------------------ -->
+
+ <!--Registrace -->
+ <register username="jmeno" password="heslo" />
+
+ <!--Přihlášení-->
+ <login username="jmeno" password="heslo" />
+
+ <!--Zapnutí chatu-->
+ <chatstart />
+
+ <!--Zpráva chatu-->
+ <chat from="nickname">message</chat>
+
+ <!--Posun kamene -->
+ <move x="x" y="y" player="protihrac" />
+
+ <!--Seznam hráčů online -->
+ <playerslist />
+
+ <!--Výzva -->
+ <duel player="vyzyvajici_hrac" with="vyzyvany_hrac" />
+
+ <!--Příjem výzvy -->
+ <duel player="vyzyvajici_hrac" with="vyzyvany_hrac" accept="true" />
+
+ <!--Nepřijmutí výzvy -->
+ <duel player="vyzyvajici_hrac" with="vyzyvany_hrac" accept="false" />
+
+ <!--Získání seznamu rozehraných her -->
+ <getgames />
+
+ <!--Načtení rozehrané hry s hračem hrac-->
+ <getgame with="hrac" />
+
+ <!--Požadavky posílané serverem ------------------------------------------ -->
+
+ <!--Výzvy, chat a posuny jsou stejné - server je přeposílá (u posunu mění jméno protihráče).-->
+
+ <!--Úspěšná registrace na serveru.-->
+ <register success="true" />
+
+ <!--Neúspěšná registrace na serveru -->
+ <register success="false" bugnumber="cislo_zpravy"/>
+
+ <!--Úspěšné přihlášení na serveru.-->
+ <login success="true" />
+
+ <!--Neúspěšné přihlášení na serveru -->
+ <login success="false" bugnumber="cislo_zpravy"/>
+
+ <!--Seznam online uživatelů-->
+ <playerslist>
+ 	<player>hrac1</player>
+ 	<player>hrac2</player>
+ 	<player>hrac3</player>
+ </playerslist>
+ 
+ <!--Seznam rozehraných her-->
+ <gameslist>
+ 	<gamewith>hrac1</gamewith>
+ 	<gamewith>hrac2</gamewith>
+ 	<gamewith>hrac3</gamewith>
+ </gameslist>
+ 
+ <!--Poslání záznamu hry -->
+ <savedgame with="petr">
+ 	<white nickname="pavel" />
+ 	<black nickname="petr" />
+ 	<gamestate>2 1 2 1 2 1 2 1 1 2 1 2 1 2 1 2 2 1 1 1 2 1 2 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1
+	     1 1 1 4 1 4 1 4 1 4 4 1 4 1 4 1 4 1 1 4 1 4 1 4 1 4 1 3 5 0</gamestate>
+ </savedgame>
+
+ \endverbatim
+
+ \section third_part_libs Knihovny třetích stran
+ 	- <a href="http://www.wxwidgets.org" target="_blank">Framework wxWidgets.</a>
+	- <a href="http://code.google.com/p/ticpp/" target="_blank">TinyXML++ parser.</a>
+	- <a href="http://www.codesingularity.de/index.php/c-code-snippets-and-tutorials/md5" target="_blank">MD5 Algorithm for wxWidgets.</a>
+  
+ @todo: Udelat indexovou stranku (soubor index.txt)
+ @todo: Udelat nadrizeny Makefile, ktery zavola src/Makefile a bude umet zabalit cely projekt (v zadani)
+*/
